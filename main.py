@@ -1,64 +1,34 @@
+from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import CommandHandler, MessageHandler, Filters, ApplicationBuilder
+
 import os
-import logging
-import threading
-import time
-from flask import Flask
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-# Enable logging to track bot activity
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
-# Load Telegram Bot Token from environment variables
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-
-# Initialize Flask server to keep the bot online
+# Initialize Flask App
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "🚀 AI Trading Bot is running and stable!"
+# Load Telegram Bot Token
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+bot = Bot(token=TOKEN)
 
-def run_flask():
-    """Runs Flask in a background thread to prevent Render from stopping the bot."""
-    app.run(host='0.0.0.0', port=8080, threaded=True)
+# Create Telegram Bot Application
+app_builder = ApplicationBuilder().token(TOKEN).build()
 
-# Telegram Bot Functions
-async def start(update: Update, context: CallbackContext) -> None:
-    """Send a welcome message when /start is used."""
-    await update.message.reply_text("🚀 AI Trading Bot Connected! You'll receive real-time trade updates.")
+# Start Command Handler
+async def start(update: Update, context):
+    await update.message.reply_text("🚀 AI Trading Bot Connected! You’ll start receiving real-time updates.")
 
-async def unknown(update: Update, context: CallbackContext) -> None:
-    """Handles unknown commands."""
-    await update.message.reply_text("🤖 Sorry, I didn't understand that command.")
+# Handle all incoming Telegram messages
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    """Process incoming updates from Telegram"""
+    update = Update.de_json(request.get_json(), bot)
+    app_builder.process_update(update)
+    return "OK", 200
 
-# Keep bot running by pinging itself every 40 seconds
-def keep_bot_active():
-    while True:
-        logger.info("🔄 Bot is running and staying active...")
-        time.sleep(40)  # Prevents Render from stopping the bot
+# Add Handlers
+app_builder.add_handler(CommandHandler("start", start))
 
-# Run the bot and Flask together
-def main():
-    """Starts the bot and ensures continuous operation."""
-    application = Application.builder().token(TOKEN).build()
-
-    # Add command handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.COMMAND, unknown))
-
-    # Start Flask server in a background thread
-    threading.Thread(target=run_flask, daemon=True).start()
-
-    # Start the activity checker in a background thread
-    threading.Thread(target=keep_bot_active, daemon=True).start()
-
-    # Start the bot
-    application.run_polling()
-
+# Start Webhook
 if __name__ == "__main__":
-    main()
+    app.run(host="0.0.0.0", port=10000)
