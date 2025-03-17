@@ -6,7 +6,16 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 
 # Load environment variables (make sure you set these in Render)
 TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_URL = os.getenv("RENDER_URL") + "/" + TOKEN
+import os
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+RENDER_URL = os.getenv("RENDER_URL")
+
+if not BOT_TOKEN or not RENDER_URL:
+    raise ValueError("Missing environment variables! Make sure BOT_TOKEN and RENDER_URL are set.")
+
+WEBHOOK_URL = f"{RENDER_URL}/{BOT_TOKEN}"
+
 
 app = Flask(__name__)
 
