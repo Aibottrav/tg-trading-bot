@@ -1,62 +1,38 @@
-import logging
 import os
 from flask import Flask, request
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
+from telegram import Bot, Update
+from telegram.ext import CommandHandler, MessageHandler, ApplicationBuilder
 
-# Load environment variables (make sure you set these in Render)
-TOKEN = os.getenv("BOT_TOKEN")
-import os
-
+# Get environment variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 RENDER_URL = os.getenv("RENDER_URL")
 
+# Validate environment variables
 if not BOT_TOKEN or not RENDER_URL:
-    raise ValueError("Missing environment variables! Make sure BOT_TOKEN and RENDER_URL are set.")
+    raise ValueError("⚠️ Missing BOT_TOKEN or RENDER_URL! Check environment variables.")
 
+# Set webhook URL
 WEBHOOK_URL = f"{RENDER_URL}/{BOT_TOKEN}"
 
-
+# Flask app for webhook
 app = Flask(__name__)
+bot = Bot(token=BOT_TOKEN)
 
-# Initialize the Telegram bot
-application = ApplicationBuilder().token(TOKEN).build()
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def handle_update():
+    update = Update.de_json(request.get_json(), bot)
+    application.update_queue.put(update)
+    return "OK", 200
 
-# Logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Define /start command
 async def start(update: Update, context):
-    await update.message.reply_text("🚀 AI Trading Bot is now online!")
+    await update.message.reply_text("🚀 AI Trading Bot Connected! You’ll start receiving real-time updates.")
 
-# Define message handler
-async def handle_message(update: Update, context):
-    text = update.message.text
-    logger.info(f"Received message: {text}")
-    await update.message.reply_text(f"Echo: {text}")
-
-# Add handlers
+application = ApplicationBuilder().token(BOT_TOKEN).build()
 application.add_handler(CommandHandler("start", start))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-# Webhook route
-@app.route(f"/{TOKEN}", methods=["POST"])
-def webhook():
-    try:
-        update = Update.de_json(request.get_json(), application.bot)
-        application.update_queue.put(update)
-        return "OK", 200
-    except Exception as e:
-        logger.error(f"Error processing webhook: {e}")
-        return "Internal Server Error", 500
-
-# Set Webhook when script starts
-async def set_webhook():
-    await application.bot.set_webhook(WEBHOOK_URL)
 
 if __name__ == "__main__":
-    import asyncio
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(set_webhook())
-    app.run(host="0.0.0.0", port=10000)
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.getenv("PORT", 10000)),
+        webhook_url=WEBHOOK_URL
+    )
