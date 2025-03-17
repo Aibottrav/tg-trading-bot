@@ -20,8 +20,12 @@ bot = Bot(token=BOT_TOKEN)
 
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def handle_update():
-    update = Update.de_json(request.get_json(), bot)
+    update_data = request.get_json()
+    print("Received Update:", update_data)  # Debugging line
+
+    update = Update.de_json(update_data, bot)
     application.update_queue.put(update)
+    
     return "OK", 200
 
 async def start(update: Update, context):
