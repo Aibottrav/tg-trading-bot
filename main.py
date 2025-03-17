@@ -23,17 +23,26 @@ def handle_update():
     update_data = request.get_json()
     print("Received Update:", update_data)  # Debugging
 
-    update = Update.de_json(update_data, bot)
-    
-    # Try sending an immediate response (bypassing queue)
-    if "message" in update_data:
-        chat_id = update_data["message"]["chat"]["id"]
-        text = update_data["message"]["text"]
-        bot.send_message(chat_id, f"Received: {text}")
-    
-    application.update_queue.put(update)
-    
-    return "OK", 200
+    # Ensure update_data is valid before processing
+    if not update_data:
+        return "No update received", 400  # Return error if no data received
+
+    try:
+        update = Update.de_json(update_data, bot)
+        
+        # Try sending an immediate response (for debugging)
+        if "message" in update_data:
+            chat_id = update_data["message"]["chat"]["id"]
+            text = update_data["message"]["text"]
+            bot.send_message(chat_id, f"Received: {text}")
+
+        application.update_queue.put(update)
+
+        return "OK", 200
+
+    except Exception as e:
+        print("Error processing update:", str(e))  # Debugging
+        return f"Error: {str(e)}", 500  # Return error to diagnose issue
 
 
 async def start(update: Update, context):
