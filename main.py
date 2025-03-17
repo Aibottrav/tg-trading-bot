@@ -15,20 +15,20 @@ application = Application.builder().token(BOT_TOKEN).build()
 # Enable async handling in Flask
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 async def handle_update():
-    update_data = request.get_json()
+    update_data = await request.get_json()  # Await request to properly handle async
     print("Received Update:", update_data)  # Debugging
-    
-    update = Update.de_json(update_data, bot)
 
+    update = Update.de_json(update_data, bot)
+    
     if "message" in update_data:
         chat_id = update_data["message"]["chat"]["id"]
         text = update_data["message"]["text"]
-        await bot.send_message(chat_id, f"Received: {text}")  # Fix: Use `await` properly
+        await bot.send_message(chat_id, f"Received: {text}")  # Ensure async execution
     
-    # Process update in the Telegram bot application
-    await application.update_queue.put(update)
+    await application.update_queue.put(update)  # Fix async issues
 
     return "OK", 200
+
 
 # Start Flask App
 if __name__ == "__main__":
