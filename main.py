@@ -25,7 +25,7 @@ def handle_update():
     return "OK", 200
 
 async def start(update: Update, context):
-    await update.message.reply_text("🚀 AI Trading Bot Connected! You’ll start receiving real-time updates.")
+    await update.message.reply_text("🚀 AI Trading Bot Connected! You’ll start receiving real-time updates Boss.")
 
 application = ApplicationBuilder().token(BOT_TOKEN).build()
 application.add_handler(CommandHandler("start", start))
