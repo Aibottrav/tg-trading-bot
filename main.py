@@ -1,34 +1,47 @@
+import logging
 from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import CommandHandler, MessageHandler, filters, ApplicationBuilder
-import os
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
-# Initialize Flask App
+TOKEN = "7850670334:AAHksGaElDlOZbgrHb0uBo-KZ7wiSuPUV5Y"
+WEBHOOK_URL = "https://trading-bot-98kz.onrender.com/{}".format(TOKEN)  # Update this with your Render URL
+
 app = Flask(__name__)
 
-# Load Telegram Bot Token
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-bot = Bot(token=TOKEN)
+# Initialize the Telegram bot
+application = ApplicationBuilder().token(TOKEN).build()
 
-# Create Telegram Bot Application
-app_builder = ApplicationBuilder().token(TOKEN).build()
+# Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Start Command Handler
+# Define /start command
 async def start(update: Update, context):
-    await update.message.reply_text("🚀 AI Trading Bot Connected! You’ll start receiving real-time updates.")
+    await update.message.reply_text("🚀 AI Trading Bot Connected Boss!")
 
-# Handle all incoming Telegram messages
+# Define message handler
+async def handle_message(update: Update, context):
+    text = update.message.text
+    logger.info(f"Received message: {text}")
+    await update.message.reply_text(f"Echo: {text}")
+
+# Add handlers
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+# Webhook route
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    """Process incoming updates from Telegram"""
-    update = Update.de_json(request.get_json(), bot)
-    app_builder.process_update(update)
+    update = Update.de_json(request.get_json(), application.bot)
+    application.update_queue.put(update)
     return "OK", 200
 
-# Add Handlers
-app_builder.add_handler(CommandHandler("start", start))
-app_builder.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, start))
+# Set Webhook when script runs
+async def set_webhook():
+    await application.bot.set_webhook(WEBHOOK_URL)
 
-# Start Webhook
 if __name__ == "__main__":
+    import asyncio
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(set_webhook())
     app.run(host="0.0.0.0", port=10000)
