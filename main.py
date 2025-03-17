@@ -1,10 +1,12 @@
 import logging
+import os
 from flask import Flask, request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
-TOKEN = "7850670334:AAHksGaElDlOZbgrHb0uBo-KZ7wiSuPUV5Y"
-WEBHOOK_URL = "https://trading-bot-98kz.onrender.com/{}".format(TOKEN)  # Update this with your Render URL
+# Load environment variables (make sure you set these in Render)
+TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_URL = os.getenv("RENDER_URL") + "/" + TOKEN
 
 app = Flask(__name__)
 
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Define /start command
 async def start(update: Update, context):
-    await update.message.reply_text("🚀 AI Trading Bot Connected Boss!")
+    await update.message.reply_text("🚀 AI Trading Bot is now online!")
 
 # Define message handler
 async def handle_message(update: Update, context):
@@ -32,11 +34,15 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_m
 # Webhook route
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    update = Update.de_json(request.get_json(), application.bot)
-    application.update_queue.put(update)
-    return "OK", 200
+    try:
+        update = Update.de_json(request.get_json(), application.bot)
+        application.update_queue.put(update)
+        return "OK", 200
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}")
+        return "Internal Server Error", 500
 
-# Set Webhook when script runs
+# Set Webhook when script starts
 async def set_webhook():
     await application.bot.set_webhook(WEBHOOK_URL)
 
