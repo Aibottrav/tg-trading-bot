@@ -1,7 +1,6 @@
 from flask import Flask, request
 from telegram import Bot, Update
-from telegram.ext import CommandHandler, MessageHandler, Filters, ApplicationBuilder
-
+from telegram.ext import CommandHandler, MessageHandler, filters, ApplicationBuilder
 import os
 
 # Initialize Flask App
@@ -28,6 +27,7 @@ def webhook():
 
 # Add Handlers
 app_builder.add_handler(CommandHandler("start", start))
+app_builder.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, start))
 
 # Start Webhook
 if __name__ == "__main__":
