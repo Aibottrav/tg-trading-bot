@@ -21,12 +21,20 @@ bot = Bot(token=BOT_TOKEN)
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def handle_update():
     update_data = request.get_json()
-    print("Received Update:", update_data)  # Debugging line
+    print("Received Update:", update_data)  # Debugging
 
     update = Update.de_json(update_data, bot)
+    
+    # Try sending an immediate response (bypassing queue)
+    if "message" in update_data:
+        chat_id = update_data["message"]["chat"]["id"]
+        text = update_data["message"]["text"]
+        bot.send_message(chat_id, f"Received: {text}")
+    
     application.update_queue.put(update)
     
     return "OK", 200
+
 
 async def start(update: Update, context):
     await update.message.reply_text("🚀 AI Trading Bot Connected! You’ll start receiving real-time updates Boss.")
